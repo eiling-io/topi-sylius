@@ -1,0 +1,44 @@
+###> Symfony ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+###< Symfony ###
+
+###> PHP / Composer ###
+/vendor/
+###< PHP / Composer ###
+
+###> Sylius test application (tests/TestApplication) ###
+/tests/TestApplication/.env.local
+/tests/TestApplication/.env.*.local
+/tests/TestApplication/var/
+/tests/TestApplication/vendor/
+/tests/TestApplication/node_modules/
+/tests/TestApplication/public/build/
+/tests/TestApplication/public/bundles/
+/tests/TestApplication/public/media/
+###< Sylius test application ###
+
+###> runtime / cache / logs ###
+/var/
+.php-cs-fixer.cache
+.php_cs.cache
+.phpunit.result.cache
+/.phpunit.cache/
+###< runtime / cache / logs ###
+
+###> frontend ###
+/node_modules/
+npm-debug.log
+yarn-error.log
+###< frontend ###
+
+###> editors & OS ###
+.DS_Store
+Thumbs.db
+###< editors & OS ###
+
+###> tooling ###
+/.claude/settings.local.json
+###< tooling ###

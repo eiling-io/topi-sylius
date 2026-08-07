@@ -1,0 +1,42 @@
+# The Payum gateway factory/actions, controllers, and catalog/shipping-method sync are
+# wired entirely through config/services.xml — nothing to configure here for the
+# payment integration itself.
+#
+# Topi Elements (https://developer.topi.eu/docs/topi-elements/using-topi-elements) is
+# wired below: a global script include + init, plus a rental-price badge on the PDP
+# and on every product card (listings, homepage, cross-sells, ...).
+#
+# The <x-topi-checkout-button> ("Buy now") hooks are deliberately NOT wired here yet:
+# Topi's POST /offers rejects an offer with no shipping_address ("missing shipping
+# address for ecom offers") for sales_channel=ecommerce, which contradicts the
+# Elements docs' framing of the hosted checkout collecting it — needs clarifying with
+# Topi (or a saved-address-only gate for logged-in customers) before going live. The
+# controllers/services/templates for it (BuyNowOfferService, BuyNowOrderCreator,
+# BuyNowProductOfferController, BuyNowCartOfferController, checkout_button_*.html.twig)
+# are already built and container-lint-clean, just inert until hooked back in here.
+sylius_twig_hooks:
+  hooks:
+    'sylius_shop.base#javascripts':
+      topi_elements_init:
+        template: '@EilingIoSyliusTopiPlugin/shop/topi_elements/init.html.twig'
+        priority: -100
+
+    'sylius_shop.product.show.content.info.summary':
+      topi_rental_badge:
+        template: '@EilingIoSyliusTopiPlugin/shop/topi_elements/pdp_badge.html.twig'
+        priority: 250
+
+    'sylius_shop.shared.product.card.prices':
+      topi_rental_badge:
+        template: '@EilingIoSyliusTopiPlugin/shop/topi_elements/listing_badge.html.twig'
+        priority: -10
+
+    'sylius_shop.cart.index.content.form.sections.general.summary':
+      topi_rental_badge:
+        template: '@EilingIoSyliusTopiPlugin/shop/topi_elements/cart_badge.html.twig'
+        priority: 150
+
+    'sylius_shop.checkout.select_payment.content.form':
+      topi_rental_overview:
+        template: '@EilingIoSyliusTopiPlugin/shop/topi_elements/rental_overview.html.twig'
+        priority: 50

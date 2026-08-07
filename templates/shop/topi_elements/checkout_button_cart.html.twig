@@ -1,0 +1,19 @@
+{#
+    "Buy now with topi" accelerated checkout on the cart page — same hook/context as
+    cart_badge.html.twig. Relies on `topi.cartItems` already being set by the global
+    init script from that badge's data-topi-cart-item carriers.
+#}
+{% set cart = hookable_metadata.context.cart %}
+{% if cart is not null %}
+    {% set hasQualifyingItem = false %}
+    {% for item in cart.items %}
+        {% if item.variant is not null and is_topi_product(item.variant) %}
+            {% set hasQualifyingItem = true %}
+        {% endif %}
+    {% endfor %}
+
+    {% if hasQualifyingItem %}
+        {# Click handler bound in init.html.twig (bindBuyNowButtons). #}
+        <x-topi-checkout-button checkout-mode="cart"></x-topi-checkout-button>
+    {% endif %}
+{% endif %}

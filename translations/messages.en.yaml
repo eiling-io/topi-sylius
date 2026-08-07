@@ -1,0 +1,6 @@
+eiling_io_sylius_topi:
+  buy_now:
+    processing:
+      title: 'Thank you for your order!'
+      message: "We're finalizing your order with Topi. You'll receive a confirmation email as soon as it's ready — no need to wait here."
+      back_to_shop: 'Back to shop'

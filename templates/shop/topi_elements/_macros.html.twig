@@ -1,0 +1,13 @@
+{#
+    Shared by cart_badge.html.twig and rental_overview.html.twig: both need the exact
+    same "deposit topi.cartItems as hidden data carriers" trick used by init.html.twig,
+    just fed from a cart (pre-checkout) vs. an order (select-payment step) respectively
+    — both are OrderInterface, so the item-collection logic is identical.
+#}
+{% macro cart_item_carriers(items) %}
+    {% for item in items %}
+        {% if item.variant is not null and is_topi_product(item.variant) %}
+            <span hidden data-topi-cart-item="{{ topi_pdp_item(item.variant, item.quantity)|json_encode }}"></span>
+        {% endif %}
+    {% endfor %}
+{% endmacro %}

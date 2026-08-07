@@ -1,0 +1,14 @@
+{#
+    "Ab X €/Monat" rental badge on the product detail page.
+    Hooked into `sylius_shop.product.show.content.info.summary`, which receives both
+    `product` and `variant` as context (see @SyliusShop/product/show/content/info/summary.html.twig).
+    The payload is only deposited as a data attribute here — the global init script
+    (topi_elements/init.html.twig) picks it up and calls `topi.pdpItem = ...` once the
+    `topi` instance actually exists.
+#}
+{% set variant = hookable_metadata.context.variant %}
+{% if variant is not null and is_topi_product(variant) %}
+    <x-topi-product-rental-summary-label
+        data-topi-pdp-item="{{ topi_pdp_item(variant)|json_encode }}"
+    ></x-topi-product-rental-summary-label>
+{% endif %}

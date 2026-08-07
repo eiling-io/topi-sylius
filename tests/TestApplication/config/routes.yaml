@@ -1,0 +1,2 @@
+eiling_io_sylius_topi:
+    resource: "@EilingIoSyliusTopiPlugin/config/routes.yaml"

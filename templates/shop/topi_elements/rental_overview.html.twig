@@ -1,0 +1,11 @@
+{#
+    Duration breakdown (6/12/24/36 months) on the payment-selection step — hooked into
+    `sylius_shop.checkout.select_payment.content.form`, which receives `order` as
+    context (see @SyliusShop/checkout/select_payment/content/form.html.twig).
+#}
+{% import '@EilingIoSyliusTopiPlugin/shop/topi_elements/_macros.html.twig' as topi %}
+{% set order = hookable_metadata.context.order %}
+{% if order is not null %}
+    <x-topi-rental-overview></x-topi-rental-overview>
+    {{ topi.cart_item_carriers(order.items) }}
+{% endif %}

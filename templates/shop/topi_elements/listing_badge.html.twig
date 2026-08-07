@@ -1,0 +1,16 @@
+{#
+    "Ab X €/Monat" rental badge on every product card — hooked into
+    `sylius_shop.shared.product.card.prices`, the one shared hook rendered for every
+    product card across listings, the homepage, cart cross-sells, etc. (see
+    @SyliusShop/shared/product/card/prices.html.twig), so this covers "every article"
+    without needing to hook each listing page individually.
+    Like the PDP badge, the payload is only deposited as a data attribute; the global
+    init script collects all of them and calls `topi.listingItems = [...]` once.
+#}
+{% set variant = hookable_metadata.context.variant %}
+{% if variant is not null and is_topi_product(variant) %}
+    <x-topi-listing-rental-summary-label
+        reference="{{ variant.code }}"
+        data-topi-listing-item="{{ topi_pdp_item(variant)|json_encode }}"
+    ></x-topi-listing-rental-summary-label>
+{% endif %}

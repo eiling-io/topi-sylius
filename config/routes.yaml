@@ -1,0 +1,5 @@
+eiling_io_sylius_topi:
+  resource:
+    path: ../src/Controller/
+    namespace: EilingIo\SyliusTopiPlugin\Controller
+  type: attribute

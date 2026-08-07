@@ -1,0 +1,11 @@
+{#
+    "From X €/mo. for your whole cart" — hooked into
+    `sylius_shop.cart.index.content.form.sections.general.summary`, which receives
+    `cart` as context (see @SyliusShop/cart/index/content/form/sections/general/summary.html.twig).
+#}
+{% import '@EilingIoSyliusTopiPlugin/shop/topi_elements/_macros.html.twig' as topi %}
+{% set cart = hookable_metadata.context.cart %}
+{% if cart is not null %}
+    <x-topi-cart-rental-summary-label></x-topi-cart-rental-summary-label>
+    {{ topi.cart_item_carriers(cart.items) }}
+{% endif %}

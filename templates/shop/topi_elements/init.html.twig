@@ -1,0 +1,132 @@
+{#
+    Loads the Topi Elements widget script and initializes it once per page, then reads
+    every rental badge's data-topi-*-item attribute (deposited earlier in the DOM by
+    pdp_badge/listing_badge/cart_badge/rental_overview.html.twig) and feeds it to the
+    widget, plus registers the two "Buy now" click handlers used by the
+    <x-topi-checkout-button> elements on the PDP and cart page.
+
+    This has to run *after* those badges are rendered — which it does, since this
+    template is hooked into `sylius_shop.base#javascripts`, rendered at the very end
+    of <body> (see @SyliusShop/shared/layout/base.html.twig) — rather than each badge
+    setting `topi.pdpItem`/`topi.cartItems`/etc. inline, which would run before the
+    `topi` instance below even exists.
+
+    The collection itself re-runs on every DOM mutation (debounced), not just once on
+    load: the cart/order summary — where cart_badge/rental_overview/checkout_button_cart
+    live — renders as a lazy Twig/Live Component (see its `{{ loader.render() }}`
+    placeholder in @SyliusShop/cart/index/content/form/sections/general/summary.html.twig),
+    so its data-topi-cart-item carriers don't exist yet at the point this script first
+    runs; a single one-shot querySelectorAll here would silently see nothing.
+#}
+{% if topi_enabled %}
+    <script src="{{ topi_enable_live ? 'https://elements.topi.eu/topi_elements.umd.js' : 'https://elements.topi-sandbox.eu/topi_elements.umd.js' }}"></script>
+    <script>
+        (function () {
+            window.topi = new TopiElements({
+                locale: {{ app.request.locale|slice(0, 2)|json_encode|raw }},
+                widgetId: {{ topi_widget_id|json_encode|raw }}
+            });
+
+            function collectAndApplyTopiItems() {
+                var pdpBadge = document.querySelector('[data-topi-pdp-item]');
+                if (pdpBadge) {
+                    try {
+                        window.topi.pdpItem = JSON.parse(pdpBadge.getAttribute('data-topi-pdp-item'));
+                    } catch (e) {
+                        // malformed payload — skip rather than breaking the rest of the widget
+                    }
+                }
+
+                var listingItems = [];
+                document.querySelectorAll('[data-topi-listing-item]').forEach(function (el) {
+                    try {
+                        listingItems.push(JSON.parse(el.getAttribute('data-topi-listing-item')));
+                    } catch (e) {
+                        // malformed payload — skip this one item
+                    }
+                });
+                if (listingItems.length > 0) {
+                    window.topi.listingItems = listingItems;
+                }
+
+                var cartItems = [];
+                document.querySelectorAll('[data-topi-cart-item]').forEach(function (el) {
+                    try {
+                        cartItems.push(JSON.parse(el.getAttribute('data-topi-cart-item')));
+                    } catch (e) {
+                        // malformed payload — skip this one item
+                    }
+                });
+                if (cartItems.length > 0) {
+                    window.topi.cartItems = cartItems;
+                }
+            }
+
+            // "Buy now" checkout-button handlers. NOT wired via an `onclick="..."`
+            // HTML attribute: that's a native inline event handler, evaluated as a JS
+            // *expression* by the browser (so `onclick="topiBuyNowProduct"` just
+            // references the function without calling it — nothing happens on click).
+            // addEventListener also works with x-topi-checkout-button's late DOM
+            // insertion on the cart page (no shadow root, clicks on its internal
+            // React markup bubble up to the host element same as any other node).
+            function bindBuyNowButtons() {
+                document.querySelectorAll('x-topi-checkout-button[checkout-mode="product"]:not([data-topi-bound])').forEach(function (button) {
+                    button.setAttribute('data-topi-bound', '1');
+                    button.addEventListener('click', function () {
+                        var variantCode = button.getAttribute('data-topi-variant-code');
+                        var url = {{ path('topi_payment_buy_now_product', {variantCode: 'VARIANT_CODE'})|json_encode|raw }}
+                            .replace('VARIANT_CODE', encodeURIComponent(variantCode));
+
+                        fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' } })
+                            .then(function (response) {
+                                if (!response.ok) {
+                                    throw new Error('topi buy-now (product) failed: ' + response.status);
+                                }
+                                return response.json();
+                            })
+                            .then(function (data) {
+                                window.location.href = data.checkoutRedirectUrl;
+                            })
+                            .catch(function (error) {
+                                console.error(error);
+                            });
+                    });
+                });
+
+                document.querySelectorAll('x-topi-checkout-button[checkout-mode="cart"]:not([data-topi-bound])').forEach(function (button) {
+                    button.setAttribute('data-topi-bound', '1');
+                    button.addEventListener('click', function () {
+                        fetch({{ path('topi_payment_buy_now_cart')|json_encode|raw }}, {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json' },
+                        })
+                            .then(function (response) {
+                                if (!response.ok) {
+                                    throw new Error('topi buy-now (cart) failed: ' + response.status);
+                                }
+                                return response.json();
+                            })
+                            .then(function (data) {
+                                window.location.href = data.checkoutRedirectUrl;
+                            })
+                            .catch(function (error) {
+                                console.error(error);
+                            });
+                    });
+                });
+            }
+
+            collectAndApplyTopiItems();
+            bindBuyNowButtons();
+
+            var debounceTimer;
+            new MutationObserver(function () {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function () {
+                    collectAndApplyTopiItems();
+                    bindBuyNowButtons();
+                }, 50);
+            }).observe(document.body, { childList: true, subtree: true });
+        })();
+    </script>
+{% endif %}

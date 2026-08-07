@@ -1,0 +1,11 @@
+{% extends '@SyliusShop/shared/layout/base.html.twig' %}
+
+{% block content %}
+    <div class="container py-5 text-center">
+        <h1 class="mb-3">{{ 'eiling_io_sylius_topi.buy_now.processing.title'|trans }}</h1>
+        <p class="mb-4">{{ 'eiling_io_sylius_topi.buy_now.processing.message'|trans }}</p>
+        <a href="{{ path('sylius_shop_homepage') }}" class="btn btn-primary">
+            {{ 'eiling_io_sylius_topi.buy_now.processing.back_to_shop'|trans }}
+        </a>
+    </div>
+{% endblock %}

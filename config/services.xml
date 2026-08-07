@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<container
+        xmlns="http://symfony.com/schema/dic/services"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd"
+>
+    <imports>
+        <import resource="services/**" />
+    </imports>
+
+    <parameters>
+        <parameter key="eiling_io_sylius_topi.enable_topi">%env(bool:TOPI_ENABLE)%</parameter>
+    </parameters>
+
+    <services>
+        <defaults autowire="true" autoconfigure="true">
+            <bind key="$topiEnabled">%eiling_io_sylius_topi.enable_topi%</bind>
+        </defaults>
+
+        <!-- Autoregisters everything under src/ (ApiClient\Client + its
+             GuzzleClientFactory, Service, Payum actions, Twig extension,
+             GatewayConfigurationType, PaymentGatewayFactory, ...) as private services.
+             Controllers/commands are re-declared public="true" below; CaptureAction/
+             StatusAction/GatewayConfigurationType tag themselves via #[AutoconfigureTag],
+             so no extra wiring is needed for those.
+             ApiClient's Catalog/Common/Offer/Order/ShippingMethod subdirectories are
+             excluded: they're plain DTOs/mappers plus the 4 HTTP clients that
+             ApiClient\Client itself instantiates with `new` (never through the
+             container), so autowiring them would only add unresolvable definitions
+             for a GuzzleHttp\Client argument nothing ever asks the container for. -->
+        <prototype namespace="EilingIo\SyliusTopiPlugin\" resource="../src/*"
+                   exclude="../src/{DependencyInjection,Migrations,EilingIoSyliusTopiPlugin.php,ApiClient/Catalog,ApiClient/Common,ApiClient/Offer,ApiClient/Order,ApiClient/ShippingMethod}" />
+
+        <service id="EilingIo\SyliusTopiPlugin\Command\SyncCatalogCommand" public="true" />
+        <service id="EilingIo\SyliusTopiPlugin\Command\SyncShippingMethodsCommand" public="true" />
+
+        <service id="EilingIo\SyliusTopiPlugin\Controller\WebhookController" public="true" />
+        <service id="EilingIo\SyliusTopiPlugin\Controller\ReturnController" public="true" />
+        <service id="EilingIo\SyliusTopiPlugin\Controller\CreateOfferController" public="true" />
+        <service id="EilingIo\SyliusTopiPlugin\Controller\ProductPricingController" public="true" />
+        <service id="EilingIo\SyliusTopiPlugin\Controller\BatchProductPricingController" public="true" />
+        <service id="EilingIo\SyliusTopiPlugin\Controller\CartRentalPricingController" public="true" />
+        <service id="EilingIo\SyliusTopiPlugin\Controller\BuyNowProductOfferController" public="true" />
+        <service id="EilingIo\SyliusTopiPlugin\Controller\BuyNowCartOfferController" public="true" />
+        <service id="EilingIo\SyliusTopiPlugin\Controller\BuyNowReturnController" public="true" />
+
+        <!-- Registers the "topi_payment" Payum gateway factory, mirroring how every
+             other Payum-based Sylius payment method registers its factory. -->
+        <service id="eiling_io_sylius_topi.payum.gateway_factory_builder.topi_payment"
+                 class="Payum\Bundle\PayumBundle\Builder\GatewayFactoryBuilder">
+            <argument>EilingIo\SyliusTopiPlugin\PaymentGatewayFactory</argument>
+            <tag name="payum.gateway_factory_builder" factory="topi_payment" />
+        </service>
+
+        <!-- BuyNowOrderCreator needs the address *resource* factory (sylius.factory.address),
+             not a plain `new Address()` — wired explicitly rather than relying on
+             FactoryInterface autowiring, which would be ambiguous (every Sylius
+             resource has its own FactoryInterface<T> service). -->
+        <service id="EilingIo\SyliusTopiPlugin\Service\BuyNowOrderCreator">
+            <argument key="$addressFactory" type="service" id="sylius.factory.address" />
+        </service>
+    </services>
+</container>

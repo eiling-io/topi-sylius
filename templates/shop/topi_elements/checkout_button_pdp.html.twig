@@ -1,0 +1,14 @@
+{#
+    "Buy now with topi" accelerated checkout on the PDP — same hook/context as
+    pdp_badge.html.twig. Relies on `topi.pdpItem` already being set by the global
+    init script from that badge's data-topi-pdp-item carrier. The click handler
+    itself is bound in init.html.twig (bindBuyNowButtons), which reads the variant
+    code back off data-topi-variant-code.
+#}
+{% set variant = hookable_metadata.context.variant %}
+{% if variant is not null and is_topi_product(variant) %}
+    <x-topi-checkout-button
+        checkout-mode="product"
+        data-topi-variant-code="{{ variant.code }}"
+    ></x-topi-checkout-button>
+{% endif %}
