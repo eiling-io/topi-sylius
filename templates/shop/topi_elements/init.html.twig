@@ -70,9 +70,51 @@
             // insertion on the cart page (no shadow root, clicks on its internal
             // React markup bubble up to the host element same as any other node).
             function bindBuyNowButtons() {
+                // Small loading indicator for the gap between the click and the redirect
+                // landing — createOffer() is a real API round trip, not instantaneous.
+                // `<x-topi-checkout-button>` is Topi's own custom element with internal
+                // React markup and no documented "loading" attribute/slot in this repo,
+                // so this dims+disables the element itself via plain inline styles
+                // (guaranteed to work on any element, custom or not) and drops a small
+                // spinner next to it, rather than assuming an unverified vendor API.
+                function setButtonLoading(button, isLoading) {
+                    if (isLoading) {
+                        button.style.opacity = '0.6';
+                        button.style.pointerEvents = 'none';
+
+                        var spinner = document.createElement('span');
+                        spinner.setAttribute('data-topi-loading-spinner', '1');
+                        spinner.setAttribute('aria-hidden', 'true');
+                        spinner.style.display = 'inline-block';
+                        spinner.style.marginLeft = '0.5rem';
+                        spinner.style.width = '1rem';
+                        spinner.style.height = '1rem';
+                        spinner.style.border = '2px solid currentColor';
+                        spinner.style.borderRightColor = 'transparent';
+                        spinner.style.borderRadius = '50%';
+                        spinner.style.animation = 'topi-spin 0.75s linear infinite';
+                        if (!document.getElementById('topi-spin-keyframes')) {
+                            var style = document.createElement('style');
+                            style.id = 'topi-spin-keyframes';
+                            style.textContent = '@keyframes topi-spin { to { transform: rotate(360deg); } }';
+                            document.head.appendChild(style);
+                        }
+                        button.insertAdjacentElement('afterend', spinner);
+                    } else {
+                        button.style.opacity = '';
+                        button.style.pointerEvents = '';
+                        var existingSpinner = button.nextElementSibling;
+                        if (existingSpinner && existingSpinner.hasAttribute('data-topi-loading-spinner')) {
+                            existingSpinner.remove();
+                        }
+                    }
+                }
+
                 document.querySelectorAll('x-topi-checkout-button[checkout-mode="product"]:not([data-topi-bound])').forEach(function (button) {
                     button.setAttribute('data-topi-bound', '1');
                     button.addEventListener('click', function () {
+                        setButtonLoading(button, true);
+
                         var variantCode = button.getAttribute('data-topi-variant-code');
                         var url = {{ path('topi_payment_buy_now_product', {variantCode: 'VARIANT_CODE'})|json_encode|raw }}
                             .replace('VARIANT_CODE', encodeURIComponent(variantCode));
@@ -88,6 +130,7 @@
                                 window.location.href = data.checkoutRedirectUrl;
                             })
                             .catch(function (error) {
+                                setButtonLoading(button, false);
                                 console.error(error);
                             });
                     });
@@ -96,6 +139,8 @@
                 document.querySelectorAll('x-topi-checkout-button[checkout-mode="cart"]:not([data-topi-bound])').forEach(function (button) {
                     button.setAttribute('data-topi-bound', '1');
                     button.addEventListener('click', function () {
+                        setButtonLoading(button, true);
+
                         fetch({{ path('topi_payment_buy_now_cart')|json_encode|raw }}, {
                             method: 'POST',
                             headers: { 'Accept': 'application/json' },
@@ -110,6 +155,7 @@
                                 window.location.href = data.checkoutRedirectUrl;
                             })
                             .catch(function (error) {
+                                setButtonLoading(button, false);
                                 console.error(error);
                             });
                     });

@@ -3,8 +3,14 @@
 # payment integration itself.
 #
 # Topi Elements (https://developer.topi.eu/docs/topi-elements/using-topi-elements) is
-# wired below: a global script include + init, plus a rental-price badge on the PDP
-# and on every product card (listings, homepage, cross-sells, ...).
+# wired below: a global script include + init, plus a rental-price badge on the PDP,
+# every product card (listings, homepage, cross-sells, ...), the cart, and every step
+# of checkout (sidebar summary on address/select_shipping/select_payment, the
+# duration breakdown again on select_payment and complete — the latter has no shared
+# sidebar to hook into, see checkout_sidebar_badge.html.twig/rental_overview.html.twig
+# for why it needs its own separate hook). Plus a small loading overlay for the
+# checkout-complete → Topi-hosted-checkout redirect, see
+# checkout_redirect_overlay.html.twig.
 #
 # The <x-topi-checkout-button> ("Buy now") hooks are deliberately NOT wired here yet:
 # Topi's POST /offers rejects an offer with no shipping_address ("missing shipping
@@ -36,7 +42,20 @@ sylius_twig_hooks:
         template: '@EilingIoSyliusTopiPlugin/shop/topi_elements/cart_badge.html.twig'
         priority: 150
 
+    'sylius_shop.checkout.common.sidebar.summary':
+      topi_rental_badge:
+        template: '@EilingIoSyliusTopiPlugin/shop/topi_elements/checkout_sidebar_badge.html.twig'
+        priority: -10
+
     'sylius_shop.checkout.select_payment.content.form':
       topi_rental_overview:
         template: '@EilingIoSyliusTopiPlugin/shop/topi_elements/rental_overview.html.twig'
         priority: 50
+
+    'sylius_shop.checkout.complete.content.form':
+      topi_rental_overview:
+        template: '@EilingIoSyliusTopiPlugin/shop/topi_elements/rental_overview.html.twig'
+        priority: 150
+      topi_redirect_overlay:
+        template: '@EilingIoSyliusTopiPlugin/shop/topi_elements/checkout_redirect_overlay.html.twig'
+        priority: 60

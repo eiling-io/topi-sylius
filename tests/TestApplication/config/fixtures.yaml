@@ -1,0 +1,22 @@
+# Overrides the "Fashion Web Store" demo channel from Sylius core's own default fixture
+# suite (@SyliusCoreBundle/Resources/config/app/fixtures/shop_configuration.yaml) to
+# price everything in EUR instead of USD.
+#
+# Topi's seller account is EUR-only (see OfferService::CURRENCY /
+# VariantPriceResolver) — with the channel left on its stock USD default, every price
+# sent to Topi's API is USD cents mislabeled as EUR, which their sandbox rejects with
+# a "Currency mismatch" error the moment an offer is actually created (harmless for
+# the rental-price *badges*, which just render Topi's number as-is, but it breaks the
+# real checkout capture). Switching the channel to EUR here makes the demo shop's own
+# prices match what's actually being sent, so local Topi testing behaves like a real
+# EUR shop would.
+sylius_fixtures:
+    suites:
+        default:
+            fixtures:
+                channel:
+                    options:
+                        custom:
+                            fashion_web_store:
+                                currencies:
+                                    - 'EUR'

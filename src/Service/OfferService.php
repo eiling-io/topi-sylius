@@ -16,6 +16,7 @@ use EilingIo\SyliusTopiPlugin\ApiClient\Offer\CustomerInfo;
 use EilingIo\SyliusTopiPlugin\ApiClient\Offer\OfferLinePayload;
 use EilingIo\SyliusTopiPlugin\ApiClient\Offer\PostalAddress;
 use EilingIo\SyliusTopiPlugin\ApiClient\Offer\ShippingInfo;
+use Sylius\Component\Core\Model\AddressInterface;
 use Sylius\Component\Core\Model\OrderInterface;
 
 class OfferService
@@ -74,7 +75,7 @@ class OfferService
         $customerInfo->email = $customer->getEmail();
 
         $company = new CompanyInfo();
-        $company->name = $billingAddress->getCompany() ?? '';
+        $company->name = $this->resolveCompanyName($billingAddress);
 
         $billing = new PostalAddress();
         $billing->city = $billingAddress->getCity();
@@ -104,5 +105,22 @@ class OfferService
         $offer->shipping = $shippingInfo;
 
         return $this->client->offer()->createOffer($offer);
+    }
+
+    /**
+     * Topi requires `company.name` to be at least 3 characters (their offer is
+     * always a B2B financing product) — Sylius' checkout address form leaves
+     * "Company" optional, so a private customer (guest or logged in, doesn't
+     * matter) with nothing in that field would otherwise send an empty string and
+     * get a hard "invalid_length" rejection from Topi's API, right when the order
+     * is placed. Falling back to the billing name isn't a real company name, but
+     * Topi has no "no company" option to fall back to instead, and this at least
+     * keeps the offer creatable for private customers.
+     */
+    private function resolveCompanyName(AddressInterface $billingAddress): string
+    {
+        $company = trim((string) $billingAddress->getCompany());
+
+        return $company !== '' ? $company : (string) $billingAddress->getFullName();
     }
 }

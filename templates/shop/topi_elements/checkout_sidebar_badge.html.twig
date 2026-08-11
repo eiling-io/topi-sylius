@@ -1,0 +1,21 @@
+{#
+    "From X €/mo. for your whole cart" — hooked into
+    `sylius_shop.checkout.common.sidebar.summary`, the order-summary sidebar shared by
+    the address, select_shipping, and select_payment steps (see
+    @SyliusShop/checkout/common/sidebar/summary.html.twig and
+    @SyliusShop/checkout/common/layout.html.twig — the sidebar block is only rendered
+    for those three; `complete` overrides it away, which is why that step gets its own
+    hook into `sylius_shop.checkout.complete.content.form` instead, see
+    rental_overview.html.twig).
+
+    Feedback point: rental prices should stay visible across the whole checkout, not
+    just on the payment step — this is the same compact badge already shown on the
+    cart page (cart_badge.html.twig), just keyed off `order` instead of `cart` (both
+    are OrderInterface; "cart" is simply the not-yet-placed order).
+#}
+{% import '@EilingIoSyliusTopiPlugin/shop/topi_elements/_macros.html.twig' as topi %}
+{% set order = hookable_metadata.context.order %}
+{% if order is not null %}
+    <x-topi-cart-rental-summary-label></x-topi-cart-rental-summary-label>
+    {{ topi.cart_item_carriers(order.items) }}
+{% endif %}

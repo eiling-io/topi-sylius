@@ -1,6 +1,7 @@
 imports:
     - { resource: "@EilingIoSyliusTopiPlugin/config/config.yaml" }
     - { resource: "services_test.php" }
+    - { resource: "fixtures.yaml" }
 
 twig:
     paths:

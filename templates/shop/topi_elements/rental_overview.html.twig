@@ -1,7 +1,14 @@
 {#
-    Duration breakdown (6/12/24/36 months) on the payment-selection step — hooked into
-    `sylius_shop.checkout.select_payment.content.form`, which receives `order` as
-    context (see @SyliusShop/checkout/select_payment/content/form.html.twig).
+    Duration breakdown (6/12/24/36 months) — hooked into both
+    `sylius_shop.checkout.select_payment.content.form` (see
+    @SyliusShop/checkout/select_payment/content/form.html.twig) and
+    `sylius_shop.checkout.complete.content.form` (see
+    @SyliusShop/checkout/complete/content/form.html.twig), which both receive `order`
+    as context. The complete step needs its own hook here (rather than relying on the
+    sidebar badge from checkout_sidebar_badge.html.twig) because it overrides the
+    shared checkout sidebar away entirely — and it's the step right after payment
+    selection, where a customer who just picked Topi most needs the rental terms
+    confirmed one more time before placing the order.
 #}
 {% import '@EilingIoSyliusTopiPlugin/shop/topi_elements/_macros.html.twig' as topi %}
 {% set order = hookable_metadata.context.order %}

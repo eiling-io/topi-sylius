@@ -1,0 +1,60 @@
+{#
+    Small full-page loading overlay shown the moment the customer submits the
+    checkout "complete" step, for as long as Topi is the payment method they picked.
+
+    Hooked into `sylius_shop.checkout.complete.content.form` (receives `order` as
+    context, see @SyliusShop/checkout/complete/content/form.html.twig), sibling to
+    the `navigation` entry rendering the "Place order" button in that same hook.
+
+    Why this is needed: unlike the "Buy now" buttons (checkout_button_*.html.twig),
+    which redirect via a JS `fetch()` call, the regular checkout's "Place order"
+    button is a plain form submit — Sylius completes the order server-side, then
+    CaptureAction (src/Payum/CaptureAction.php) calls Topi's API to create an offer
+    and throws a Payum HttpRedirect to the hosted checkout, all before the browser
+    sees a response. That round trip has no built-in visual feedback, so a slow
+    network/Topi response can look like a stuck page. This overlay is shown
+    synchronously on the form's `submit` event — before the browser navigates away —
+    and simply stays on screen (nothing hides it again) until either the redirect to
+    Topi lands or a fresh page load replaces it (e.g. on a validation error, which
+    reloads the page and never runs this script again until it re-renders).
+#}
+{% set order = hookable_metadata.context.order %}
+{# Collection::last() returns `false` (not null) on an empty collection — see
+   @SyliusShop/order/thank_you/content/payment_instruction.html.twig for the same
+   guard against that. #}
+{% set lastPayment = order is not null ? order.payments.last() : false %}
+{% set gatewayConfig = lastPayment != false and lastPayment.method is not null ? lastPayment.method.gatewayConfig : null %}
+{% if gatewayConfig is not null and gatewayConfig.factoryName == 'topi_payment' %}
+    <div
+        id="topi-checkout-redirect-overlay"
+        hidden
+        class="position-fixed top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center gap-3"
+        style="z-index: 1080; background: rgba(255, 255, 255, 0.85);"
+    >
+        <div class="spinner-border" role="status" aria-hidden="true"></div>
+        <p class="mb-0">{{ 'eiling_io_sylius_topi.checkout.redirecting'|trans }}</p>
+    </div>
+    <script>
+        (function () {
+            var overlay = document.getElementById('topi-checkout-redirect-overlay');
+            var form = document.querySelector('form[action="{{ path('sylius_shop_checkout_complete') }}"]');
+            if (!overlay || !form) {
+                return;
+            }
+
+            // `submit` only fires once the browser's own (HTML5) validation has
+            // passed — form.html.twig sets `novalidate`, so Sylius' own server-side
+            // validation is what actually gates a valid order; on a validation
+            // error the whole page reloads and this listener is simply gone again,
+            // so the overlay can never get stuck open in front of an error message.
+            form.addEventListener('submit', function () {
+                overlay.hidden = false;
+
+                var submitButton = form.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                }
+            });
+        })();
+    </script>
+{% endif %}

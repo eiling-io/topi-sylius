@@ -37,6 +37,7 @@ yarn-error.log
 ###> editors & OS ###
 .DS_Store
 Thumbs.db
+/.idea/
 ###< editors & OS ###
 
 ###> tooling ###
