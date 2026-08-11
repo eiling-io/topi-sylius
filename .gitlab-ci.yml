@@ -1,0 +1,49 @@
+# Runs the plugin's own PHPUnit test suite (tests/Unit — see phpunit.xml.dist) on
+# every merge request and on every push to main (i.e. once an MR is merged).
+#
+# These are pure, self-contained unit tests — mocked dependencies throughout, no
+# database, no Sylius kernel/test-application boot (see tests/Unit/**/*Test.php) — so
+# `composer install` + `phpunit` is genuinely all this needs. tests/Functional and
+# tests/Integration are still empty placeholders (see their .gitignore files); once
+# they gain real tests that need the Sylius test-application/DB, this job will need
+# a services: block (MySQL) and the ddev init steps from README.md, not before.
+
+stages:
+  - test
+
+variables:
+  COMPOSER_CACHE_DIR: "$CI_PROJECT_DIR/.composer-cache"
+
+phpunit:
+  stage: test
+  # composer.lock is locked to packages (doctrine/instantiator 2.1, doctrine/orm
+  # 3.6, ...) that require PHP ^8.4 — matches .ddev/config.yaml's php_version.
+  image: php:8.4-cli
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  cache:
+    key:
+      files:
+        - composer.lock
+    paths:
+      - $COMPOSER_CACHE_DIR
+  before_script:
+    # git: composer needs it for a handful of dev-branch/VCS-sourced requires; unzip:
+    # php:8.4-cli ships without ext-zip, and composer's dist downloads are zip
+    # archives — without one of the two it fails outright, this isn't optional.
+    - apt-get update -qq && apt-get install -yqq --no-install-recommends git unzip
+    - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+  script:
+    # --ignore-platform-req=ext-*: composer.json's dependency tree (Sylius, Doctrine,
+    # ...) declares a bunch of PHP extensions this specific test run never touches
+    # (mocked throughout — no real DB/HTTP/image handling happens in tests/Unit).
+    # Skips that platform check rather than provisioning every extension into the
+    # base image just to satisfy it; the PHP *version* requirement is still
+    # enforced. Revisit once Functional/Integration tests need the real thing.
+    - composer install --no-interaction --no-progress --prefer-dist --ignore-platform-req=ext-*
+    - vendor/bin/phpunit --log-junit report.xml
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml

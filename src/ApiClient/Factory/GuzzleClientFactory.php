@@ -17,6 +17,15 @@ class GuzzleClientFactory
     private const API_BASE_SANDBOX = 'https://seller-api-sandbox.topi-sandbox.eu/v1/';
     private const API_BASE_PRODUCTION = 'https://seller-api.topi.eu/v1/';
 
+    // Neither client below had a timeout before — a stalled connection to Topi (seen
+    // once in the wild: CaptureAction logged, then nothing, forever) left the
+    // customer's browser waiting on /payment/capture/{token} indefinitely, since
+    // that's a synchronous call blocking the checkout redirect. These bound how long
+    // a single checkout/sync can hang before failing loudly instead of silently.
+    private const CONNECT_TIMEOUT_SECONDS = 5.0;
+    private const REQUEST_TIMEOUT_SECONDS = 30.0;
+    private const TOKEN_REQUEST_TIMEOUT_SECONDS = 10.0;
+
     /**
      * @var array<string, GuzzleClient>
      */
@@ -57,6 +66,8 @@ class GuzzleClientFactory
                     'grant_type' => 'client_credentials',
                     'scope' => 'client',
                 ],
+                'connect_timeout' => self::CONNECT_TIMEOUT_SECONDS,
+                'timeout' => self::TOKEN_REQUEST_TIMEOUT_SECONDS,
             ]);
             $data = json_decode($response->getBody()->getContents(), true) ?? [];
             $accessToken = $data['access_token'] ?? null;
@@ -103,6 +114,8 @@ class GuzzleClientFactory
             'headers'  => [
                 'User-Agent' => 'TopiPayment/Sylius 1.0',
             ],
+            'connect_timeout' => self::CONNECT_TIMEOUT_SECONDS,
+            'timeout' => self::REQUEST_TIMEOUT_SECONDS,
         ]);
     }
 }
