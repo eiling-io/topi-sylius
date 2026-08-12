@@ -1,0 +1,31 @@
+{#
+    "Checkout with topi" accelerated-checkout button — shown on the select_payment
+    step, but only visible once the customer has topi selected among the payment
+    method radios (see bindCheckoutPaymentButton() in init.html.twig, which toggles
+    the `hidden` attribute on radio change; starts hidden here so it never flashes
+    visible before that first sync runs).
+
+    Skips the complete/review step entirely: clicking it completes the Sylius order
+    and creates the topi offer in one request (see CheckoutButtonOfferController),
+    then redirects straight to Topi's hosted checkout — the same destination as the
+    regular "Next" → "Place order" path, just without the intermediate review page.
+
+    `checkout-mode="cart"` is topi's own vocabulary (Elements only knows "cart" or
+    "product", see https://developer.topi.eu/docs/topi-elements/elements/checkout-button)
+    — `data-topi-checkout-purpose="select-payment"` is what actually tells
+    bindCheckoutPaymentButton() vs. bindBuyNowButtons() in init.html.twig apart, since
+    both would otherwise match the same tag+checkout-mode selector.
+
+    Hooked into `sylius_shop.checkout.select_payment.content.form`, which receives
+    `order` as context (see @SyliusShop/checkout/select_payment/content/form.html.twig)
+    — same as rental_overview.html.twig, whose item carriers this reuses (no need to
+    deposit `data-topi-cart-item` a second time).
+#}
+{% set order = hookable_metadata.context.order %}
+{% if order is not null %}
+    <x-topi-checkout-button
+        checkout-mode="cart"
+        hidden
+        data-topi-checkout-purpose="select-payment"
+    ></x-topi-checkout-button>
+{% endif %}

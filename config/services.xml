@@ -44,6 +44,7 @@
         <service id="EilingIo\SyliusTopiPlugin\Controller\BuyNowProductOfferController" public="true" />
         <service id="EilingIo\SyliusTopiPlugin\Controller\BuyNowCartOfferController" public="true" />
         <service id="EilingIo\SyliusTopiPlugin\Controller\BuyNowReturnController" public="true" />
+        <service id="EilingIo\SyliusTopiPlugin\Controller\CheckoutButtonOfferController" public="true" />
 
         <!-- Registers the "topi_payment" Payum gateway factory, mirroring how every
              other Payum-based Sylius payment method registers its factory. -->

@@ -2,10 +2,17 @@
     "From X €/mo. for your whole cart" — hooked into
     `sylius_shop.cart.index.content.form.sections.general.summary`, which receives
     `cart` as context (see @SyliusShop/cart/index/content/form/sections/general/summary.html.twig).
+
+    `mode="cart"` is required — without it the element's own `observedAttributes`
+    (`reference`, `mode`) never resolve a rendering mode and it silently stays empty
+    (0x0, no shadow content) even though `window.topi.cartItems` is populated
+    correctly. Confirmed live: `customElements.get('x-topi-cart-rental-summary-label').observedAttributes`
+    → `['reference', 'mode']`; setting `mode="cart"` on an already-rendered element
+    makes it render immediately without any other change.
 #}
 {% import '@EilingIoSyliusTopiPlugin/shop/topi_elements/_macros.html.twig' as topi %}
 {% set cart = hookable_metadata.context.cart %}
 {% if cart is not null %}
-    <x-topi-cart-rental-summary-label></x-topi-cart-rental-summary-label>
+    <x-topi-cart-rental-summary-label mode="cart"></x-topi-cart-rental-summary-label>
     {{ topi.cart_item_carriers(cart.items) }}
 {% endif %}

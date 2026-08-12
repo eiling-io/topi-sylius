@@ -62,6 +62,48 @@
                 }
             }
 
+            // Small loading indicator for the gap between the click and the redirect
+            // landing — createOffer() (or CheckoutButtonOfferController, for the
+            // payment-step button below) is a real API round trip, not instantaneous.
+            // `<x-topi-checkout-button>` is Topi's own custom element with internal
+            // React markup and no documented "loading" attribute/slot in this repo,
+            // so this dims+disables the element itself via plain inline styles
+            // (guaranteed to work on any element, custom or not) and drops a small
+            // spinner next to it, rather than assuming an unverified vendor API.
+            // Shared by bindBuyNowButtons() and bindCheckoutPaymentButton() below.
+            function setButtonLoading(button, isLoading) {
+                if (isLoading) {
+                    button.style.opacity = '0.6';
+                    button.style.pointerEvents = 'none';
+
+                    var spinner = document.createElement('span');
+                    spinner.setAttribute('data-topi-loading-spinner', '1');
+                    spinner.setAttribute('aria-hidden', 'true');
+                    spinner.style.display = 'inline-block';
+                    spinner.style.marginLeft = '0.5rem';
+                    spinner.style.width = '1rem';
+                    spinner.style.height = '1rem';
+                    spinner.style.border = '2px solid currentColor';
+                    spinner.style.borderRightColor = 'transparent';
+                    spinner.style.borderRadius = '50%';
+                    spinner.style.animation = 'topi-spin 0.75s linear infinite';
+                    if (!document.getElementById('topi-spin-keyframes')) {
+                        var style = document.createElement('style');
+                        style.id = 'topi-spin-keyframes';
+                        style.textContent = '@keyframes topi-spin { to { transform: rotate(360deg); } }';
+                        document.head.appendChild(style);
+                    }
+                    button.insertAdjacentElement('afterend', spinner);
+                } else {
+                    button.style.opacity = '';
+                    button.style.pointerEvents = '';
+                    var existingSpinner = button.nextElementSibling;
+                    if (existingSpinner && existingSpinner.hasAttribute('data-topi-loading-spinner')) {
+                        existingSpinner.remove();
+                    }
+                }
+            }
+
             // "Buy now" checkout-button handlers. NOT wired via an `onclick="..."`
             // HTML attribute: that's a native inline event handler, evaluated as a JS
             // *expression* by the browser (so `onclick="topiBuyNowProduct"` just
@@ -69,47 +111,13 @@
             // addEventListener also works with x-topi-checkout-button's late DOM
             // insertion on the cart page (no shadow root, clicks on its internal
             // React markup bubble up to the host element same as any other node).
+            //
+            // `:not([data-topi-checkout-purpose])` on the cart-mode selector excludes
+            // checkout_payment_button.html.twig's button below — Topi's own
+            // checkout-mode vocabulary is just "cart"/"product", so it reuses
+            // checkout-mode="cart" too, but needs a completely different handler
+            // (CheckoutButtonOfferController, not the buy-now-cart endpoint).
             function bindBuyNowButtons() {
-                // Small loading indicator for the gap between the click and the redirect
-                // landing — createOffer() is a real API round trip, not instantaneous.
-                // `<x-topi-checkout-button>` is Topi's own custom element with internal
-                // React markup and no documented "loading" attribute/slot in this repo,
-                // so this dims+disables the element itself via plain inline styles
-                // (guaranteed to work on any element, custom or not) and drops a small
-                // spinner next to it, rather than assuming an unverified vendor API.
-                function setButtonLoading(button, isLoading) {
-                    if (isLoading) {
-                        button.style.opacity = '0.6';
-                        button.style.pointerEvents = 'none';
-
-                        var spinner = document.createElement('span');
-                        spinner.setAttribute('data-topi-loading-spinner', '1');
-                        spinner.setAttribute('aria-hidden', 'true');
-                        spinner.style.display = 'inline-block';
-                        spinner.style.marginLeft = '0.5rem';
-                        spinner.style.width = '1rem';
-                        spinner.style.height = '1rem';
-                        spinner.style.border = '2px solid currentColor';
-                        spinner.style.borderRightColor = 'transparent';
-                        spinner.style.borderRadius = '50%';
-                        spinner.style.animation = 'topi-spin 0.75s linear infinite';
-                        if (!document.getElementById('topi-spin-keyframes')) {
-                            var style = document.createElement('style');
-                            style.id = 'topi-spin-keyframes';
-                            style.textContent = '@keyframes topi-spin { to { transform: rotate(360deg); } }';
-                            document.head.appendChild(style);
-                        }
-                        button.insertAdjacentElement('afterend', spinner);
-                    } else {
-                        button.style.opacity = '';
-                        button.style.pointerEvents = '';
-                        var existingSpinner = button.nextElementSibling;
-                        if (existingSpinner && existingSpinner.hasAttribute('data-topi-loading-spinner')) {
-                            existingSpinner.remove();
-                        }
-                    }
-                }
-
                 document.querySelectorAll('x-topi-checkout-button[checkout-mode="product"]:not([data-topi-bound])').forEach(function (button) {
                     button.setAttribute('data-topi-bound', '1');
                     button.addEventListener('click', function () {
@@ -136,7 +144,7 @@
                     });
                 });
 
-                document.querySelectorAll('x-topi-checkout-button[checkout-mode="cart"]:not([data-topi-bound])').forEach(function (button) {
+                document.querySelectorAll('x-topi-checkout-button[checkout-mode="cart"]:not([data-topi-checkout-purpose]):not([data-topi-bound])').forEach(function (button) {
                     button.setAttribute('data-topi-bound', '1');
                     button.addEventListener('click', function () {
                         setButtonLoading(button, true);
@@ -162,8 +170,82 @@
                 });
             }
 
+            // Payment-step "checkout with topi" button (checkout_payment_button.html.twig)
+            // — shown only once the customer has topi selected among the payment
+            // method radios, since it skips straight past the complete/review step
+            // (see CheckoutButtonOfferController for what a click actually does).
+            // Swaps places with the regular "Next" button (identified by its stable
+            // `data-test-next-step` attribute) rather than just appearing above it —
+            // only one of the two ways to move on should be on screen at a time, and
+            // it should sit in the very same flex row as "Change shipping method".
+            function bindCheckoutPaymentButton() {
+                var button = document.querySelector('x-topi-checkout-button[data-topi-checkout-purpose="select-payment"]');
+                if (!button) {
+                    return;
+                }
+
+                var nextButton = document.querySelector('[data-test-next-step]');
+
+                // Relocates the button node itself into "Next"'s own flex row,
+                // right after it — safe to do unconditionally (not just once topi
+                // is picked): `hidden`'s `display: none` keeps whichever of the two
+                // is inactive out of that row's flex layout either way, so moving
+                // this early doesn't affect anything while topi isn't selected yet.
+                if (nextButton && button.previousElementSibling !== nextButton) {
+                    nextButton.insertAdjacentElement('afterend', button);
+                }
+
+                var topiRadio = document.querySelector('input[type="radio"][value="topi_payment"]');
+                var topiSelected = !!(topiRadio && topiRadio.checked);
+                button.hidden = !topiSelected;
+
+                if (nextButton) {
+                    nextButton.hidden = topiSelected;
+                }
+
+                if (button.hasAttribute('data-topi-bound')) {
+                    return;
+                }
+                button.setAttribute('data-topi-bound', '1');
+
+                button.addEventListener('click', function () {
+                    setButtonLoading(button, true);
+
+                    fetch({{ path('topi_payment_checkout_button')|json_encode|raw }}, {
+                        method: 'POST',
+                        headers: { 'Accept': 'application/json' },
+                    })
+                        .then(function (response) {
+                            if (!response.ok) {
+                                throw new Error('topi checkout-button failed: ' + response.status);
+                            }
+                            return response.json();
+                        })
+                        .then(function (data) {
+                            window.location.href = data.checkoutRedirectUrl;
+                        })
+                        .catch(function (error) {
+                            setButtonLoading(button, false);
+                            console.error(error);
+                        });
+                });
+            }
+
             collectAndApplyTopiItems();
             bindBuyNowButtons();
+            bindCheckoutPaymentButton();
+
+            // The payment method radios don't mutate the DOM when the customer picks
+            // a different one (just their `checked` state) — the MutationObserver
+            // below wouldn't catch that, so this re-syncs the button's visibility
+            // directly on 'change'. Delegated on `document` (bound once here, not
+            // inside bindCheckoutPaymentButton(), which reruns on every mutation tick)
+            // since the radios themselves only exist on the select_payment step.
+            document.addEventListener('change', function (event) {
+                if (event.target.matches && event.target.matches('input[type="radio"][value="topi_payment"], input[type="radio"][name*="[method]"]')) {
+                    bindCheckoutPaymentButton();
+                }
+            });
 
             var debounceTimer;
             new MutationObserver(function () {
@@ -171,6 +253,7 @@
                 debounceTimer = setTimeout(function () {
                     collectAndApplyTopiItems();
                     bindBuyNowButtons();
+                    bindCheckoutPaymentButton();
                 }, 50);
             }).observe(document.body, { childList: true, subtree: true });
         })();

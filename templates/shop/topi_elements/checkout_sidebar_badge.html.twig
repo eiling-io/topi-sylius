@@ -13,9 +13,14 @@
     cart page (cart_badge.html.twig), just keyed off `order` instead of `cart` (both
     are OrderInterface; "cart" is simply the not-yet-placed order).
 #}
+{#
+    `mode="cart"` is required — see cart_badge.html.twig for why (the element's own
+    `observedAttributes` are `reference`/`mode`; without `mode` it stays empty even
+    with `window.topi.cartItems` populated).
+#}
 {% import '@EilingIoSyliusTopiPlugin/shop/topi_elements/_macros.html.twig' as topi %}
 {% set order = hookable_metadata.context.order %}
 {% if order is not null %}
-    <x-topi-cart-rental-summary-label></x-topi-cart-rental-summary-label>
+    <x-topi-cart-rental-summary-label mode="cart"></x-topi-cart-rental-summary-label>
     {{ topi.cart_item_carriers(order.items) }}
 {% endif %}
