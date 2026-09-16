@@ -44,7 +44,10 @@ Steps to add the plugin to an existing Sylius 2.0 project.
      resource: "@EilingIoSyliusTopiPlugin/config/routes.yaml"
    ```
 
-1. Add the required env variables to your `.env` (or `.env.local`) file:
+1. Add the required env variables to your `.env` (or `.env.local`) file. `TOPI_ENABLE`,
+   `TOPI_ENABLE_LIVE`, `TOPI_ENABLE_WEBHOOK_SIGNATURE_CHECKS`, and `TOPI_WIDGET_ID` all
+   have safe defaults (off/empty) baked into the plugin, so a missing one won't break
+   the app — but set them explicitly before going live:
    ```dotenv
    # OAuth2 client credentials for the Topi seller API (identity.topi[-sandbox].eu).
    TOPI_CLIENT_ID=""
@@ -65,6 +68,15 @@ Steps to add the plugin to an existing Sylius 2.0 project.
    # Widget ID for the Topi Elements script (elements.topi[-sandbox].eu) — issued
    # separately from the client ID/secret above, ask Topi for one per environment.
    TOPI_WIDGET_ID=""
+   ```
+
+1. Clear (and, on a `prod`-like environment, warm up) the cache so the container
+   picks up the new bundle/routes/env vars — otherwise "Topi Payment" may not show
+   up as a gateway option yet, or a leftover pre-plugin container may still be
+   cached from an earlier request:
+   ```bash
+   bin/console cache:clear --env=prod
+   bin/console cache:warmup --env=prod
    ```
 
 1. In the Sylius admin (**Configuration → Payment methods → Create**), add a payment

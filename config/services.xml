@@ -10,6 +10,20 @@
     </imports>
 
     <parameters>
+        <!-- Default values for the plugin's feature-toggle env vars, so that a bare
+             `composer require` (Symfony Flex auto-registers the bundle and immediately
+             runs cache:clear as part of that) and the first page render afterwards
+             don't fail before the app's .env/.env.local ever gets these set. Secrets
+             (TOPI_CLIENT_ID/CLIENT_SECRET, TOPI_WEBHOOK_SIGNING_SECRETS) deliberately
+             have no default here: those are only read lazily by services instantiated
+             on actual use (sync commands, webhook/capture requests), not on every
+             request like TopiProductExtension (a Twig extension, built for every page
+             to supply topi_enabled/topi_widget_id as globals). -->
+        <parameter key="env(TOPI_ENABLE)">0</parameter>
+        <parameter key="env(TOPI_ENABLE_LIVE)">0</parameter>
+        <parameter key="env(TOPI_ENABLE_WEBHOOK_SIGNATURE_CHECKS)">0</parameter>
+        <parameter key="env(TOPI_WIDGET_ID)"></parameter>
+
         <parameter key="eiling_io_sylius_topi.enable_topi">%env(bool:TOPI_ENABLE)%</parameter>
     </parameters>
 
